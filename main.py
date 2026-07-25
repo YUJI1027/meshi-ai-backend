@@ -52,7 +52,7 @@ def search_restaurants(query: str, location: str):
     if ',' in location and any(c.isdigit() for c in location):
         try:
             lat, lng = location.split(',')
-            body["location"] = {
+            body["locationBias"] = {
                 "circle": {
                     "center": {
                         "latitude": float(lat),
@@ -100,7 +100,7 @@ def search_restaurants(query: str, location: str):
             {shop_list}
             """
     ai_response = client.models.generate_content(
-        model="gemini-flash-latest",
+        model="gemini-2.0-flash-lite",
         contents=prompt
     )
     ai_comment = ai_response.text
