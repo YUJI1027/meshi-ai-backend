@@ -41,13 +41,34 @@ def search_restaurants(query: str, location: str):
         "X-Goog-Api-Key": GOOGLE_PLACES_API_KEY,
         "X-Goog-FieldMask": "places.displayName,places.formattedAddress,places.rating,places.primaryTypeDisplayName"
     }
+    # 緯度経度の場所は、locationBias を使う
     body = {
-        "textQuery": f"{query} {location}",
+        "textQuery": query,
         "languageCode": "ja",
         "maxResultCount": 5,
     }
+
+    # 緯度経度かどうか判定
+    if ',' in location and any(c.isdigit() for c in location):
+        try:
+            lat, lng = location.split(',')
+            body["location"] = {
+                "circle": {
+                    "center": {
+                        "latitude": float(lat),
+                        "longitude": float(lng)
+                    },
+                    "radius": 1000.0
+                }
+            }
+        except:
+            body["textQuery"] = f"{query} {location}"
+    else:
+        body["textQuery"] = f"{query} {location}"
+
     response = requests.post(url, headers=headers, json=body)
     data = response.json()
+    print(data)
 
     results = []
     for place in data.get("places", []):
