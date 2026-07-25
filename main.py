@@ -100,7 +100,7 @@ def search_restaurants(query: str, location: str):
             {shop_list}
             """
     ai_response = client.models.generate_content(
-        model="gemini-2.0-flash-lite",
+        model="gemini-flash-latest",
         contents=prompt
     )
     ai_comment = ai_response.text
