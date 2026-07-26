@@ -33,7 +33,7 @@ def read_root():
     return {"message": "MeshiAI API is running!"}
 
 @app.get("/search")
-def search_restaurants(query: str, location: str):
+def search_restaurants(query: str, location: str, count: int = 5):
     # Google Places APIを使用してレストランを検索
     url = "https://places.googleapis.com/v1/places:searchText"
     headers = {
@@ -45,7 +45,7 @@ def search_restaurants(query: str, location: str):
     body = {
         "textQuery": query,
         "languageCode": "ja",
-        "maxResultCount": 5,
+        "maxResultCount": count,
     }
 
     # 緯度経度かどうか判定
