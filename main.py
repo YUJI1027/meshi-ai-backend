@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
 import requests
+from pydantic import BaseModel
+import httpx
 from google import genai
 
 load_dotenv()
@@ -32,8 +34,10 @@ client = genai.Client(
 def read_root():
     return {"message": "MeshiAI API is running!"}
 
+# Google Places APIのみを使用する
+# レスポンス改善のため
 @app.get("/search")
-def search_restaurants(query: str, location: str, count: int = 5):
+async def search_restaurants(query: str, location: str, count: int = 5):
     # Google Places APIを使用してレストランを検索
     url = "https://places.googleapis.com/v1/places:searchText"
     headers = {
@@ -66,7 +70,8 @@ def search_restaurants(query: str, location: str, count: int = 5):
     else:
         body["textQuery"] = f"{query} {location}"
 
-    response = requests.post(url, headers=headers, json=body)
+    async with httpx.AsyncClient() as client:
+        response = await client.post(url, headers=headers, json=body)
     data = response.json()
     print(data)
 
@@ -79,15 +84,29 @@ def search_restaurants(query: str, location: str, count: int = 5):
             "rating": place.get("rating")
         })
 
+    return {
+        "restaurants": results
+    }
+
+# Gemini APIのみを使用する
+# レスポンス改善のため
+class AICommentRequest(BaseModel):
+    query: str
+    restaurants: list
+
+@app.post("/ai-comment")
+def create_ai_comment(req: AICommentRequest):
+
     shop_list = "\n".join([
-        f"{i+1}. {r['name']} ({r['category']}) 評価{r['rating']}"
-        for i, r in enumerate(results)
+        f"{i+1}. {r['name']} 評価{r['rating']}"
+        for i, r in enumerate(req.restaurants)
     ])
+
     prompt = f"""
             あなたはグルメライターです。
 
-            以下のレストランの中から、「{query}」を探しているユーザーへの
-            おすすめコメントを100文字以内で日本語で生成してください。
+            以下のレストランの中から、「{req.query}」を探しているユーザーがいます。
+            その人に最もおすすめなお店を紹介してください。
 
             条件
             ・100文字以内
@@ -99,13 +118,10 @@ def search_restaurants(query: str, location: str, count: int = 5):
             店舗一覧
             {shop_list}
             """
-    ai_response = client.models.generate_content(
+    response =  client.models.generate_content(
         model="gemini-flash-latest",
         contents=prompt
     )
-    ai_comment = ai_response.text
-
     return {
-        "ai_comment": ai_comment,
-        "restaurants": results
+        "ai_comment": response.text
     }
